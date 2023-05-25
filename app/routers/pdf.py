@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 #print
-@router.get("/pdf")
+@router.post("/print")
 async def generate_pdf( user: models.User = Depends(get_current_user)):
     # profile = db.query(models.User).filter(models.User.user_id==user.id).first()
     # Create a byte stream to write the PDF to
@@ -19,6 +19,7 @@ async def generate_pdf( user: models.User = Depends(get_current_user)):
     # Create the PDF file using ReportLab
     # pdf = SimpleDocTemplate("example.pdf")
     pdf = canvas.Canvas(pdf_byte_stream)
+    pdf.drawString(100, 780, f"User Details")
     pdf.drawString(100, 750, f"First_name : {user.first_name}")
     pdf.drawString(100, 730, f"Last_name : {user.last_name}")
     pdf.drawString(100, 700, f"Date_of_birth : {user.date_of_birth}")

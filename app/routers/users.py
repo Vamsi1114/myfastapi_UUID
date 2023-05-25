@@ -6,25 +6,24 @@ from sqlalchemy.orm import Session
 from app import utils
 from datetime import datetime
 from ..oauth2 import get_current_user
-# from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from fastapi.security import OAuth2PasswordBearer
-
+import json
 
 oauth2_scheme =OAuth2PasswordBearer(tokenUrl='login')
 
 router = APIRouter()
 
-#create user
+#create user account
 @router.post("/user",status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
 def create_account(user : schemas.Create_Account, token:str = Depends(oauth2_scheme), db:Session = Depends(get_db)): 
   
-  token_data = db.query(models.Email_verify).filter(models.Email_verify.verify_token==token, models.Email_verify.is_active==True).first()
+  token_data = db.query(models.VerifyToken).filter(models.VerifyToken.token==token, models.VerifyToken.is_active==True).first()
   if not token_data :
       raise HTTPException(detail= 'Token already used', status_code=status.HTTP_403_FORBIDDEN)
   
   user_data = db.query(models.User).filter(models.User.email_id==token_data.email_id).first()
   if user_data  :
-      raise HTTPException(detail= 'user already exists', status_code=status.HTTP_403_FORBIDDEN)
+      raise HTTPException(detail= 'user already exists', status_code=status.HTTP_409_CONFLICT)
   
   #hash the password - user.password
   password = user.password.encode('utf-8')
@@ -41,15 +40,11 @@ def create_account(user : schemas.Create_Account, token:str = Depends(oauth2_sch
 
 #Change password
 @router.put('/change_password')
-def chnage_password(user_credentials: schemas.Change_password, db:Session = Depends(get_db), user: models.User = Depends(get_current_user)):#user: models.User = Depends(get_current_user)
-#  email = db.query(models.Email).filter(models.Email.email==user_credentials.email).first()
- user_data = db.query(models.User).join(models.Email).filter(models.User.email_id == user.email_id , models.Email.email == user_credentials.email).first()
-
- if not user_data :
-        raise HTTPException(detail= 'invalid credentials', status_code=status.HTTP_403_FORBIDDEN)
+def chnage_password(user_credentials: schemas.Change_password, db:Session = Depends(get_db), user: models.User = Depends(get_current_user)):
  
  if not utils.verify(user_credentials.old_password,user.password):
        raise HTTPException(detail= 'invalid credentials', status_code=status.HTTP_403_FORBIDDEN)
+ 
  password = user_credentials.new_password.encode('utf-8')
  hashed_password  = utils.hash(password)
  user.password = hashed_password
@@ -60,14 +55,16 @@ def chnage_password(user_credentials: schemas.Change_password, db:Session = Depe
 #Set password 
 @router.put('/set_password')
 def set_password(user_credentials: schemas.Password, token:str = Depends(oauth2_scheme), db:Session = Depends(get_db)):
-    token_data = db.query(models.Email_verify).filter(models.Email_verify.verify_token==token, models.Email_verify.is_active==True).first()
-    # data = db.query(models.Email).join(models.token_verify).filter(models.token_verify.verify_token==token,models.Email.email == user_credentials.email).first()
+# data = db.query(models.Email).join(models.token_verify).filter(models.token_verify.verify_token==token,models.Email.email == user_credentials.email).first()
+    token_data = db.query(models.VerifyToken).filter(models.VerifyToken.token == token , models.VerifyToken.is_active == True).first()
     if not token_data :
-         raise HTTPException(detail= 'Token already used', status_code=status.HTTP_403_FORBIDDEN)
+         raise HTTPException(detail= 'invalid token', status_code = status.HTTP_401_UNAUTHORIZED)
+    
     email_id = token_data.email_id
     user = db.query(models.User).filter(models.User.email_id==email_id).first()
     if not user:
          raise HTTPException(detail= 'invalid credentials', status_code=status.HTTP_403_FORBIDDEN)
+    
     hash_password = utils.hash(user_credentials.password)
     user.password = hash_password
     user.updated_on = datetime.now()
@@ -75,13 +72,14 @@ def set_password(user_credentials: schemas.Password, token:str = Depends(oauth2_
     db.commit()
     token_data.is_active= False
     db.commit()
+
     return {"Message" : "Password changed sucsessfully"}
 
 
 #LOGOUT
 @router.put('/logout')
 def logout(db:Session = Depends(get_db), token:str = Depends(oauth2_scheme), user: models.User = Depends(get_current_user)):
-    data = db.query(models.Token).filter(models.Token.user_id==user.id, models.Token.token==token).first()
+    data = db.query(models.AccessToken).filter(models.AccessToken.user_id==user.id, models.AccessToken.token==token).first()
     if not data :
         raise HTTPException(detail= 'invalid credentials', status_code=status.HTTP_403_FORBIDDEN)
     data.is_active = False
@@ -91,8 +89,23 @@ def logout(db:Session = Depends(get_db), token:str = Depends(oauth2_scheme), use
 #Deactivate
 @router.put('/deactivate')
 def deactive_account(db:Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-#    if user==None:
-#        raise HTTPException(detail= 'invalid credentials',status_code=status.HTTP_403_FORBIDDEN)
    user.is_active=False
    db.commit()
    return {"Message" : "Acoount deavtiveted"}
+
+
+
+
+
+
+
+
+
+
+
+
+#  email = db.query(models.Email).filter(models.Email.email==user_credentials.email).first()
+#  user_data = db.query(models.User).join(models.Email).filter(models.User.email_id == user.email_id , models.Email.email == user_credentials.email).first()
+
+#  if not user_data :
+#         raise HTTPException(detail= 'invalid credentials', status_code=status.HTTP_403_FORBIDDEN)

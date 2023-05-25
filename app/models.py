@@ -1,5 +1,5 @@
 from .database import Base
-from sqlalchemy import Column,Integer,String,Boolean,ForeignKey,DateTime
+from sqlalchemy import Column,Integer,String,Boolean,ForeignKey,DateTime,Date
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm import relationship
@@ -10,14 +10,14 @@ import uuid
 
 class Email(Base):
      __tablename__ = "emails"
-     id = Column(Integer, primary_key=True, index=True)
+     id = Column(Integer, primary_key=True)
      email = Column(String, nullable=False, unique=True)
 
-class Email_verify(Base):
-    __tablename__ = "email_verify"
-    id = Column(Integer, primary_key=True, index=True)
-    email_id = Column(Integer, ForeignKey("emails.id",ondelete="CASCADE"), nullable=False)
-    verify_token = Column(String)
+class VerifyToken(Base):
+    __tablename__ = "verify_tokens"
+    id = Column(Integer, primary_key=True)
+    email_id = Column(Integer, ForeignKey("emails.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False, server_default='True')
     # expiration_time = Column(DateTime, default=datetime.utcnow)
     
@@ -28,31 +28,30 @@ class User(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     password = Column(String, nullable=False)
-    date_of_birth = Column(DateTime, nullable=False)
+    date_of_birth = Column(Date, nullable=False)
     created_on = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
     updated_on =  Column(DateTime)
     phone_number = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False, server_default='True')
-    # is_deleted = Column(Boolean,nullable=False,server_default='False')
-    # def check_password(self, password):
-    #     return check_password_hash(self.password, password)
-
-class Profile(Base):
-    __tablename__ = "profile"
+    
+class UserDetail(Base):
+    __tablename__ = "user_details"
     id = Column(Integer, primary_key=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     bio = Column(String)
     image_url =  Column(String)
+    gender = Column(String, nullable=False)
+    address = Column(String, nullable=False)
     created_on = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
-    updated_on =  Column(DateTime, default=datetime.utcnow)
+    updated_on =  Column(DateTime)
 
-class Token(Base):
-    __tablename__ = "tokens"
+class AccessToken(Base):
+    __tablename__ = "access_tokens"
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    expiration_time = Column(DateTime, default=datetime.utcnow)
-    is_active = Column(Boolean, nullable=False,server_default='True')
+    expiration_time = Column(DateTime)
+    is_active = Column(Boolean, nullable=False, server_default='True')
 
 
 

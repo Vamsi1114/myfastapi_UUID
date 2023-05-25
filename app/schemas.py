@@ -11,11 +11,12 @@ class Create_Account(BaseModel):
     date_of_birth : date
     phone_number  : str
 
-class UserOut(BaseModel):
-    id : int    
-    email_id: int
+class UserOut(BaseModel):  
+    first_name : str
+    last_name : str
     created_on : datetime
-
+    date_of_birth : date
+    phone_number  : str
     class Config:
         orm_mode = True
         
@@ -27,18 +28,26 @@ class Email(BaseModel):
     email : EmailStr
 
 class Change_password(BaseModel):
-    email : EmailStr
+    # email : EmailStr
     old_password : str
     new_password : str
 
 class profile(BaseModel):
-    
-    bio : Optional[str]
-    image_url: Optional[str]
+    bio: str
+    image_url: str
+    gender: str
+    address: str
+    class Config:
+        orm_mode = True
 
 class Password(BaseModel):
     password : str
 
+class Token(BaseModel):
+    access_token : str
+    token_type: str
+    class Config:
+        orm_mode = True
 
 # class Edit_profile(BaseModel):
 #     first_name : Optional[str]
